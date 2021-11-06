@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>LCU API - Get Loot Value</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta2/css/all.min.css" />
+    <link rel="stylesheet" href="./assets/css/mdtoast.min.css" />
+
+    <style type="text/css">
+        #json-input {
+            display: block;
+            width: 100%;
+            height: 200px;
+        }
+        #translate {
+            display: block;
+            height: 28px;
+            margin: 20px 0;
+            border-radius: 3px;
+            border: 2px solid;
+            cursor: pointer;
+        }
+        #json-display {
+            border: 1px solid #000;
+            margin: 0;
+            padding: 10px 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container" style="padding-top: 30px; max-width: 100%; padding-left: 20px; padding-right: 20px">
+        <div class="card">
+            <div class="card-header">Get Loot Value</div>
+            <div class="card-body">
+                <a href="./index.html"><button type="button" class="btn btn-info btn-sm" onclick="">Change Summoner Background</button></a>
+                <a href="./get-skins.html"><button type="button" class="btn btn-info btn-sm">Get Skins List</button></a>
+                <a href="./hexatech-value.html"><button type="button" class="btn btn-info btn-sm" disabled>Get Loot Value</button></a>
+                <a href="./auto-select-champ.html"><button type="button" class="btn btn-info btn-sm">Auto Select Champion</button></a>
+                <hr />
+                <p id="lcu-status"><small><i>Please open <strong>League of Legends</strong> after use this.</i></small></p>
+                <form>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="AnalysisLoot()">Get My Loot</button>
+                </form>
+                <div style="display: none;" id="get-hexatech-result">
+                    <p>
+                        <h4><strong>Thông số báu vật</strong></h4>
+                        <ul>
+                            <li><strong>[Trang phục]</strong> Bạn đang sở hữu <strong id="total-skins">0</strong> mảnh trang phục. Trong đó có:
+                                <br />- <strong id="ULTIMATE">0</strong> tối thượng, 
+                                <br />- <strong id="MYTHIC">0</strong> thần thoại, 
+                                <br />- <strong id="LEGENDARY">0</strong> huyền thoại, 
+                                <br />- <strong id="EPIC">0</strong> sử thi,
+                                <br />- <strong id="DEFAULT">0</strong> trang phục thường. 
+                                <br />→ Giá trị tương đương <strong id="totalSK-OE">0</strong> tinh hoa cam và <strong id="totalSK-RP">0</strong> RP
+                            </li>
+                            <li><strong>[Biểu cảm]</strong> Bạn đang sở hữu <strong id="total-emotes">0</strong> mảnh biểu cảm. Giá trị tương đương <strong id="totalEM-OE">0</strong> tinh hoa cam và <strong id="totalEM-RP">0</strong> RP
+                            <li><strong>[Mẫu mắt]</strong> Bạn đang sở hữu <strong id="total-wards">0</strong> mảnh mẫu mắt. Giá trị tương đương <strong id="totalWR-OE">0</strong> tinh hoa cam và <strong id="totalWR-RP">0</strong> RP
+                            </li>
+                        </ul>
+                        <strong>Kết luận</strong> tổng giá trị tương đương <strong id="totalFinalOE">0</strong> Tinh Hoa Cam và <strong id="totalFinalRP">0</strong> RP.<br />
+                        <small><i>Những thông tin ở trên bao gồm cả trùng lặp, thông tin này chưa bao gồm giá trị từ 
+                            <strong>biểu tượng</strong>, <strong>thần hỏa</strong>, <strong>rương</strong>, <strong>điểm hàng hiệu</strong>,...</i></small>
+                    </p>
+                </div>
+            </div>
+            <div class="card-footer">
+                <i class="fa fa-code"></i> with <i class="fa fa-heart"></i> by Vy Nghia<br />
+                API Library from <a href="https://developer.riotgames.com/docs/lol#league-client">Riot Games LCU</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.jQuery = window.$ = require('jquery');
+    </script>
+    <script src="./assets/js/bootstrap.min.js"></script>
+    <script src="./assets/js/mdtoast.min.js"></script>
+    <script src="./assets/js/jquery.json-editor.min.js"></script>
+    <script>
+        const { ipcRenderer } = require('electron')
+
+        ipcRenderer.on('mainprocess-response', (event, arg) => {
+            showMessage(arg, mdtoast.SUCCESS)
+        })
+        
+        ipcRenderer.on('mainprocess-response-summoner', (event, arg) => {
+            $("#lcu-status").html(`<small>Detected <strong>LeagueClient.exe</strong>, connected to summoner name <strong>${arg}</strong></small>`)
+        })
+
+        ipcRenderer.on('mainprocess-response-skin', (event, arg) => {
+            $("#get-skin-status").html(arg).show()
+        })
+
+        ipcRenderer.on('mainprocess-response-error', (event, arg) => {
+            showMessage(arg, mdtoast.ERROR)
+        })
+
+        ipcRenderer.on('mainprocess-duplicated', (event, arg) => {
+            console.log(arg)
+        })
+
+        ipcRenderer.on('mainprocess-analyst-result', (event, arg) => {
+            $("#get-hexatech-result").show()
+
+            const result = arg
+
+            $("#total-skins").text(result.totalS.SK)
+            $("#total-wards").text(result.totalW.WR)
+            $("#total-emotes").text(result.totalE.EM)
+
+            for(let rarity in result.skinRarity) {
+                $("#" + rarity).text(result.skinRarity[rarity])
+            }
+
+            $("#totalSK-OE").text(NumberFormat(result.totalS.OE))
+            $("#totalSK-RP").text(NumberFormat(result.totalS.RP))
+
+            $("#totalWR-OE").text(NumberFormat(result.totalW.OE))
+            $("#totalWR-RP").text(NumberFormat(result.totalW.RP))
+
+            $("#totalEM-OE").text(NumberFormat(result.totalE.OE))
+            $("#totalEM-RP").text(NumberFormat(result.totalE.RP))
+            
+            $("#totalFinalOE").text(NumberFormat(result.totalS.OE + result.totalW.OE + result.totalE.OE))
+            $("#totalFinalRP").text(NumberFormat(result.totalS.RP + result.totalW.RP + result.totalE.RP))
+        })
+
+        // 
+
+        $(document).ready(function() {
+            ipcRenderer.send('request-mainprocess-action', {
+                type: "request_summoner"
+            })
+        })
+
+        function AnalysisLoot() {
+            ipcRenderer.send('request-mainprocess-action', {
+                type: "get_loot_analyst"
+            })
+        }
+
+        function NumberFormat(n) {
+            return String(n).replace(/(.)(?=(\d{3})+$)/g,'$1.')
+        }
+
+        function showMessage(text, type = mdtoast.INFO) {
+            mdtoast(text, { duration: 3000, type: type, init: true }).show()
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>LCU API - Change Summoner Background</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta2/css/all.min.css" />
+    <link rel="stylesheet" href="./assets/css/mdtoast.min.css" />
+
+    <style type="text/css">
+        #json-input {
+            display: block;
+            width: 100%;
+            height: 200px;
+        }
+        #translate {
+            display: block;
+            height: 28px;
+            margin: 20px 0;
+            border-radius: 3px;
+            border: 2px solid;
+            cursor: pointer;
+        }
+        #json-display {
+            border: 1px solid #000;
+            margin: 0;
+            padding: 10px 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container" style="padding-top: 30px; max-width: 100%; padding-left: 20px; padding-right: 20px">
+        <div class="card">
+            <div class="card-header">Change Summoner Background</div>
+            <div class="card-body">
+                <a href="./index.html"><button type="button" class="btn btn-info btn-sm" disabled>Change Summoner Background</button></a>
+                <a href="./get-skins.html"><button type="button" class="btn btn-info btn-sm">Get Skins List</button></a>
+                <a href="./hexatech-value.html"><button type="button" class="btn btn-info btn-sm">Get Loot Value</button></a>
+                <a href="./auto-select-champ.html"><button type="button" class="btn btn-info btn-sm">Auto Select Champion</button></a>
+                <hr />
+                <p id="lcu-status"><small><i>Please open <strong>League of Legends</strong> after use this.</i></small></p>
+                <form>
+                    <div class="form-group">
+                        <label for="skin_id">Skin Id:</label>
+                        <input type="text" class="form-control" id="skin_id"
+                            placeholder="Enter League of Legends Skin Id" name="skin_id">
+                    </div>
+                    <button type="button" class="btn btn-primary" onclick="ChangeBackground()">Submit</button>
+                </form>
+                <br />
+                <pre id="json-display" class="json-editor-blackbord" style="display:none">{<ul class="json-dict"><li><span class="json-string json-property">"url"</span>: <a href="https://localhost:65177/lol-summoner/v1/current-summoner/summoner-profile" class="json-string json-url">"https://localhost:65177/lol-summoner/v1/current-summoner/summoner-profile"</a>,</li><li><span class="json-string json-property">"method"</span>: <span class="json-string">"POST"</span>,</li><li><span class="json-string json-property">"success"</span>: <span class="json-literal json-literal-number"><span id="change-status">true</span></span>,</li><li><span class="json-string json-property" id="res-li">"response"</span>: <span id="res-ul"></span></li></ul>}</pre>
+            </div>
+            <div class="card-footer">
+                <i class="fa fa-code"></i> with <i class="fa fa-heart"></i> by Vy Nghia<br />
+                API Library from <a href="https://developer.riotgames.com/docs/lol#league-client">Riot Games LCU</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.jQuery = window.$ = require('jquery');
+    </script>
+    <script src="./assets/js/bootstrap.min.js"></script>
+    <script src="./assets/js/mdtoast.min.js"></script>
+    <script src="./assets/js/jquery.json-editor.min.js"></script>
+    <script>
+        const { ipcRenderer } = require('electron')
+
+        ipcRenderer.on('mainprocess-response', (event, arg) => {
+            showMessage(arg, mdtoast.SUCCESS)
+        })
+
+        ipcRenderer.on('mainprocess-response-json', (event, arg) => {
+            $("#change-status").text(arg.success)
+
+            if(arg.success == "false") {
+                $("#res-li").text(`"reason"`)
+                $("#res-ul").html(`<span class="json-string">"Cannot connect to LCU servers"</span>`)
+            } else {
+                $("#res-ul").html(`{<ul class="json-dict"><li><span class="json-string json-property">"backgroundSkinId"</span>: <span class="json-literal json-literal-number"><span id="skin-id-number">${arg.skin_id}</span></span>,</li><li><span class="json-string json-property">"regalia"</span>: <span class="json-string">"{\"bannerType\":2,\"crestType\":1}"</span></li></ul>}`)
+            }
+
+            $("#json-display").show()
+        })
+
+        ipcRenderer.on('mainprocess-response-summoner', (event, arg) => {
+            $("#lcu-status").html(`<small>Detected <strong>LeagueClient.exe</strong>, connected to summoner name <strong>${arg}</strong></small>`)
+        })
+
+        ipcRenderer.on('mainprocess-response-error', (event, arg) => {
+            showMessage(arg, mdtoast.ERROR)
+        })
+
+        // 
+
+        $(document).ready(function() {
+            ipcRenderer.send('request-mainprocess-action', {
+                type: "request_summoner"
+            })
+        })
+
+        function ChangeBackground() {
+            if (isNaN(document.getElementById("skin_id").value))
+                return showMessage("Skin Id phải là số", mdtoast.ERROR)
+
+            if (document.getElementById("skin_id").value.trim().length == 0)
+                return showMessage("Skin Id không được bỏ trống", mdtoast.ERROR)
+
+            ipcRenderer.send('request-mainprocess-action', {
+                type: "change_background",
+                skin_id: parseInt(document.getElementById("skin_id").value)
+            })
+        }
+
+        function showMessage(text, type = mdtoast.INFO) {
+            mdtoast(text, { duration: 3000, type: type, init: true }).show()
+        }
+    </script>
+</body>
+
+</html>
