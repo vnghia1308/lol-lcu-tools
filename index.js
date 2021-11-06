@@ -33,7 +33,7 @@ exec('NET SESSION', function (err, so, se) {
 /**
  * @private
  **/
-async function StartGamePhaseistener(credentials) {
+async function StartGamePhaseListener(credentials) {
     const ws = await connect(credentials)
     ws.subscribe('/lol-gameflow/v1/gameflow-phase', async (data, event) => {
         if (data == "ChampSelect") {
@@ -318,7 +318,7 @@ ipcMain.on('request-mainprocess-action', (event, arg) => {
                     SummonerName = summoner.displayName
 
                     if (IsFirstStart) {
-                        StartGamePhaseistener(credentials)
+                        StartGamePhaseListener(credentials)
                         StartLeagueClientListener(credentials)
                     }
 
@@ -346,7 +346,7 @@ ipcMain.on('request-mainprocess-action', (event, arg) => {
                                 SummonerId = summoner.summonerId
 
                                 if (IsFirstStart) {
-                                    StartGamePhaseistener(credentials)
+                                    StartGamePhaseListener(credentials)
                                     StartLeagueClientListener(credentials)
                                 }
 
